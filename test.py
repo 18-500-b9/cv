@@ -2,10 +2,11 @@ import cv2
 import numpy as np
 import imutils
 
+# Eliminating dark pixels for neighboring balls???
 lower_yellow = np.array([18,50,5]) #1
 upper_yellow = np.array([25,255,255])
 yellow = (255,255,0)
-lower_orange = np.array([5,50,5]) #2
+lower_orange = np.array([5,50,140]) #2
 upper_orange = np.array([15,255,255])
 orange = (255,140,0)
 lower_blue = np.array([110,50,5]) #3
@@ -35,20 +36,20 @@ class BallInfo:
 
 def init_ballinfo():
     balls = []
-    white_ball = BallInfo(lower_white, upper_white, white)
-    balls.append(white_ball)
-    yellow_ball = BallInfo(lower_yellow, upper_yellow, yellow)
-    balls.append(yellow_ball)
-    orange_ball = BallInfo(lower_orange, upper_orange, orange)
-    balls.append(orange_ball)
-    blue_ball = BallInfo(lower_blue, upper_blue, blue)
-    balls.append(blue_ball)
-    purple_ball = BallInfo(lower_purple, upper_purple, purple)
-    balls.append(purple_ball)
-    red_ball = BallInfo(lower_red, upper_red, red)
-    balls.append(red_ball)
-    green_ball = BallInfo(lower_green, upper_green, green)
-    balls.append(green_ball)
+#    white_ball = BallInfo(lower_white, upper_white, white)
+#    balls.append(white_ball)
+#    yellow_ball = BallInfo(lower_yellow, upper_yellow, yellow)
+#    balls.append(yellow_ball)
+#    orange_ball = BallInfo(lower_orange, upper_orange, orange)
+#    balls.append(orange_ball)
+   # blue_ball = BallInfo(lower_blue, upper_blue, blue)
+   # balls.append(blue_ball)
+#    purple_ball = BallInfo(lower_purple, upper_purple, purple)
+#    balls.append(purple_ball)
+#    red_ball = BallInfo(lower_red, upper_red, red)
+#    balls.append(red_ball)
+   # green_ball = BallInfo(lower_green, upper_green, green)
+   # balls.append(green_ball)
     brown_ball = BallInfo(lower_brown, upper_brown, brown)
     balls.append(brown_ball)
     
@@ -57,7 +58,7 @@ def init_ballinfo():
 def add_ball(ball, hsv, frame):
     # Threshold the HSV image to get only orange colors
     mask = cv2.inRange(hsv, ball.lower_hsv, ball.upper_hsv)
-    # mask = cv2.erode(mask, None, iterations=2)
+    mask = cv2.erode(mask, None, iterations=2)
     # mask = cv2.dilate(mask, None, iterations=2)
     
     # Bitwise-AND mask and original image
@@ -86,13 +87,15 @@ def add_ball(ball, hsv, frame):
             center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
      
             # only proceed if the radius meets a minimum size
-            print(cv2.contourArea(c))
+            print("radius " + str(radius))
             if radius > 10:
                 # draw the circle and centroid on the frame,
                 # then update the list of tracked points
                 cv2.circle(frame, (int(x), int(y)), int(radius),
                     ball.bgr, 2)
-                cv2.circle(frame, center, 5, (0, 0, 255), -1)
+                # This center is the centroid of circle (factors in amount of color, bad for stripes)
+                # cv2.circle(frame, center, 5, (0, 0, 255), -1)
+                cv2.circle(frame, (int(x), int(y)), 5, (0,0,255), -1)
 
 def run_simul():
     filename = "img.jpg"
@@ -113,6 +116,6 @@ def run_simul():
             break
 
 
-    # cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
 
 run_simul()
