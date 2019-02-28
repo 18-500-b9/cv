@@ -21,8 +21,8 @@ purple = (138,43,226)
 lower_red = np.array([0,100,200]) #5
 upper_red = np.array([4,255,255])
 red = (255,0,0)
-lower_green = np.array([87,240,76]) #6
-upper_green = np.array([94,255,140])
+lower_green = np.array([87,235,76]) #6
+upper_green = np.array([94,255,128])
 green = (0,128,0)
 lower_brown = np.array([175,50,0]) #7, hard
 upper_brown = np.array([180,255,200])
@@ -65,7 +65,7 @@ def init_ballinfo():
     return balls
 
 def add_ball(ball, hsv, frame):
-    # Threshold the HSV image to get only orange colors
+    # Threshold the HSV image to get only ball colors
     mask = cv2.inRange(hsv, ball.lower_hsv, ball.upper_hsv)
     mask = cv2.erode(mask, None, iterations=1)
     mask = cv2.dilate(mask, None, iterations=1)
@@ -95,22 +95,23 @@ def add_ball(ball, hsv, frame):
             ((x, y), radius) = cv2.minEnclosingCircle(c)
      
             # only proceed if the radius meets a minimum size
-            if radius > 10 and radius < 20:
+            if radius > 12 and radius < 17:
+                print("rad: " + str(radius))
                 #print(ball.str_rep + " rad: " + str(radius) + " contourArea: " +
                 #str(cv2.contourArea(c)))
-                M = cv2.moments(c)
-                center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
+                # M = cv2.moments(c)
+                # center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
                 # draw the circle and centroid on the frame,
                 # then update the list of tracked points
                 cv2.circle(frame, (int(x), int(y)), int(radius), ball.bgr, 2)
-                cv2.circle(frame, center, 2, (0, 0, 255), -1)
+                # cv2.circle(frame, center, 2, (0, 0, 255), -1)
                 # Seems like using x,y from contour area is better
                 cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1)
 
 
 def add_cuestick(hsv, frame):
-    cue_lower = np.array([19,10,125])
-    cue_upper = np.array([34,128,255])
+    cue_lower = np.array([16,10,125])
+    cue_upper = np.array([19,128,255])
 
 
     mask = cv2.inRange(hsv, cue_lower, cue_upper)
@@ -145,8 +146,8 @@ def run_simul():
     # Convert BGR to HSV
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
     balls = init_ballinfo()
-    # for ball in balls:
-    #     add_ball(ball, hsv, frame)
+    for ball in balls:
+        add_ball(ball, hsv, frame)
     add_cuestick(hsv, frame)
     end_time = datetime.utcnow()
     cv2.imshow('frame', frame)
