@@ -95,7 +95,7 @@ def add_ball(ball, hsv, frame):
             ((x, y), radius) = cv2.minEnclosingCircle(c)
      
             # only proceed if the radius meets a minimum size
-            if radius > 12 and radius < 17:
+            if radius > 13 and radius < 17:
                 print("rad: " + str(radius))
                 #print(ball.str_rep + " rad: " + str(radius) + " contourArea: " +
                 #str(cv2.contourArea(c)))
@@ -110,8 +110,8 @@ def add_ball(ball, hsv, frame):
 
 
 def add_cuestick(hsv, frame):
-    cue_lower = np.array([16,10,125])
-    cue_upper = np.array([19,128,255])
+    cue_lower = np.array([14,10,200])
+    cue_upper = np.array([18,128,255])
 
 
     mask = cv2.inRange(hsv, cue_lower, cue_upper)
@@ -124,9 +124,8 @@ def add_cuestick(hsv, frame):
         cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     for cnt in cnts:
-
-        if (cv2.contourArea(cnt) > 500):
-            #print(cv2.contourArea(cnt))
+        contourArea = cv2.contourArea(cnt)
+        if (1000 < contourArea):
             rows,cols = hsv.shape[:2]
             [vx,vy,x,y] = cv2.fitLine(cnt, cv2.DIST_L2,0,0.01,0.01)
             lefty = int((-x*vy/vx) + y)
@@ -138,26 +137,35 @@ def add_cuestick(hsv, frame):
 
 def run_simul():
     balls = init_ballinfo()
-    filename = "pool.jpg"
-    # Take each frame
-    first_time = datetime.utcnow()
-    frame = cv2.imread(filename)
+    # cap = cv2.VideoCapture(1)
+    running = True
+    while running:
+       # ret, frame = cap.read()
 
-    # Convert BGR to HSV
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-    balls = init_ballinfo()
-    for ball in balls:
-        add_ball(ball, hsv, frame)
-    add_cuestick(hsv, frame)
-    end_time = datetime.utcnow()
-    cv2.imshow('frame', frame)
+         filename = "pool2.jpg"
+         # Take each frame
+         frame = cv2.imread(filename)
 
-    while(1):
-        k = cv2.waitKey(5) & 0xFF
-        if k == 27:
-            break
+        # Convert BGR to HSV
+         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+         balls = init_ballinfo()
+         # for ball in balls:
+         #     add_ball(ball, hsv, frame)
+         add_cuestick(hsv, frame)
+         cv2.imshow('frame', frame)
+        # input
 
+         # if cv2.waitKey(1) & 0xFF == ord('q'):
+         #     break
 
-    # cv2.destroyAllWindows()
+         while(1):
+             k = cv2.waitKey(5) & 0xFF
+             if k == 27:
+                running = False
+                break
+
+    # When everything done, release the capture
+    # cap.release()
+    cv2.destroyAllWindows()
 
 run_simul()
