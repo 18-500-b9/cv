@@ -39,7 +39,7 @@ def computeLines(img, displayHoughLines):
   return minX, minY, maxX, maxY
 
   if displayHoughLines:
-    cv2.imshow('houghlines3.jpg',img)
+    cv2.imshow('houghlines.jpg',img)
     # Can average positioning between the 4 intersection points of the 4 lines
     while(1):
         k = cv2.waitKey(5) & 0xFF

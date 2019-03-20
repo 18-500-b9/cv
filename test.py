@@ -2,10 +2,10 @@ import cv2
 import numpy as np
 import imutils
 from datetime import datetime
+from houghlines import computeLines
 
 # HSV values for different color balls
 # Range is 180,255,255
-
 lower_yellow = np.array([17,200,5]) #1
 upper_yellow = np.array([25,255,255])
 yellow = (255,255,0)
@@ -34,6 +34,15 @@ black = (0,0,0)
 lower_black = np.array([0,0,0])
 upper_black = np.array([180,255,35])
 
+TABLE_LENGTH = 37.5
+TABLE_WIDTH = 17.5625
+ESC_KEY = 27
+DISPLAY = True
+MAX_CONTOUR_AREA = 1000
+USING_CAMERA = False
+MIN_RADIUS = 13
+MAX_RADIUS = 17
+
 # Class to store information on each ball
 class BallInfo:
     def __init__(self, lower_hsv, upper_hsv, rgb, str_rep):
@@ -41,6 +50,15 @@ class BallInfo:
         self.upper_hsv = upper_hsv
         self.bgr = (rgb[2], rgb[1], rgb[0])
         self.str_rep = str_rep
+
+class Ball:
+    def __init__(self, x, y, color):
+        self.x = x
+        self.y = y
+        self.color = color
+
+    def __repr__(self):
+        return "%s: (%f, %f)" % (self.color, self.x, self.y)
 
 def init_ballinfo():
     balls = []
@@ -64,7 +82,9 @@ def init_ballinfo():
     balls.append(black_ball)
     return balls
 
-def add_ball(ball, hsv, frame):
+def find_ball(ball, hsv, frame, table_coords, cv_balls):
+    minX,minY,maxX,maxY = table_coords
+
     # Threshold the HSV image to get only ball colors
     mask = cv2.inRange(hsv, ball.lower_hsv, ball.upper_hsv)
     mask = cv2.erode(mask, None, iterations=1)
@@ -73,8 +93,9 @@ def add_ball(ball, hsv, frame):
     # Bitwise-AND mask and original image
     res = cv2.bitwise_and(frame,frame, mask=mask)
 
-    cv2.imshow('mask',mask)
-    cv2.imshow('res',res)
+    if DISPLAY:
+        cv2.imshow('mask',mask)
+        cv2.imshow('res',res)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -95,28 +116,34 @@ def add_ball(ball, hsv, frame):
             ((x, y), radius) = cv2.minEnclosingCircle(c)
      
             # only proceed if the radius meets a minimum size
-            if radius > 13 and radius < 17:
-                print("rad: " + str(radius))
+            if radius > MIN_RADIUS and radius < MAX_RADIUS:
+                norm_x = (x - minX) / (maxX - minX)
+                norm_y = (y - minY) / (maxY - minY)
+                table_x = norm_x * TABLE_LENGTH
+                table_y = norm_y * TABLE_WIDTH
+                print("%s (%.3f,%.3f)" % (ball.str_rep, table_x, table_y))
                 #print(ball.str_rep + " rad: " + str(radius) + " contourArea: " +
                 #str(cv2.contourArea(c)))
-                # M = cv2.moments(c)
-                # center = (int(M["m10"] / M["m00"]), int(M["m01"] / M["m00"]))
-                # draw the circle and centroid on the frame,
-                # then update the list of tracked points
-                cv2.circle(frame, (int(x), int(y)), int(radius), ball.bgr, 2)
-                # cv2.circle(frame, center, 2, (0, 0, 255), -1)
-                # Seems like using x,y from contour area is better
-                cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1)
+                cv_balls.append(Ball(norm_x, norm_y, ball.str_rep))
+                if DISPLAY:
+                    # draw the circle and centroid on the frame,
+                    # then update the list of tracked points
+                    cv2.circle(frame, (int(x), int(y)), int(radius), ball.bgr, 2)
+                    # Seems like using x,y from contour area is better
+                    cv2.circle(frame, (int(x), int(y)), 2, (0, 255, 0), -1)
 
 
-def add_cuestick(hsv, frame):
+def find_cuestick(hsv, frame):
     cue_lower = np.array([14,10,200])
     cue_upper = np.array([18,128,255])
-
 
     mask = cv2.inRange(hsv, cue_lower, cue_upper)
     # Bitwise-AND mask and original image
     res = cv2.bitwise_and(frame,frame, mask=mask)
+
+    if DISPLAY:
+        cv2.imshow('mask',mask)
+        cv2.imshow('res',res)
 
     # find contours in the mask and initialize the current
     # (x, y) center of the ball
@@ -125,47 +152,59 @@ def add_cuestick(hsv, frame):
     cnts = imutils.grab_contours(cnts)
     for cnt in cnts:
         contourArea = cv2.contourArea(cnt)
-        if (1000 < contourArea):
+        if (MAX_CONTOUR_AREA < contourArea):
             rows,cols = hsv.shape[:2]
             [vx,vy,x,y] = cv2.fitLine(cnt, cv2.DIST_L2,0,0.01,0.01)
             lefty = int((-x*vy/vx) + y)
             righty = int(((cols-x)*vy/vx)+y)
-            cv2.line(frame,(cols-1,righty),(0,lefty),(0,255,0),2)
+            if DISPLAY:
+                cv2.line(frame,(cols-1,righty),(0,lefty),white,2)
+                cv2.circle(frame, (int(x), int(y)), 2, red, 2)
+                cv2.circle(frame, (int(cols-1),int(righty)), 2, red, 2)
 
-    cv2.imshow('mask',mask)
-    cv2.imshow('res',res)
+            return [(int(x),int(y)), (cols-1, righty)]
+
 
 def run_simul():
     balls = init_ballinfo()
-    # cap = cv2.VideoCapture(1)
+
+    # table_coords = 28,49,758,400 # TODO: from houghlines.py
+
+    if USING_CAMERA:
+        cap = cv2.VideoCapture(1)
     running = True
     while running:
-       # ret, frame = cap.read()
-
-         filename = "pool2.jpg"
-         # Take each frame
-         frame = cv2.imread(filename)
+        frame = None
+        # Take each frame
+        if USING_CAMERA:
+            ret, frame = cap.read()
+        else:
+            filename = "pool2.jpg"
+            frame = cv2.imread(filename)
+            table_coords = computeLines(frame, False)
 
         # Convert BGR to HSV
-         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-         balls = init_ballinfo()
-         # for ball in balls:
-         #     add_ball(ball, hsv, frame)
-         add_cuestick(hsv, frame)
-         cv2.imshow('frame', frame)
-        # input
+        hsv_img = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        balls = init_ballinfo()
+        cv_balls = []
+        for ball in balls:
+            find_ball(ball, hsv_img, frame, table_coords, cv_balls)
 
-         # if cv2.waitKey(1) & 0xFF == ord('q'):
-         #     break
+        print(cv_balls)
+        print(find_cuestick(hsv_img, frame))
 
-         while(1):
-             k = cv2.waitKey(5) & 0xFF
-             if k == 27:
+        if DISPLAY:
+            cv2.imshow('frame', frame)
+
+        while(1):
+            k = cv2.waitKey(5) & 0xFF
+            if k == ESC_KEY:
                 running = False
                 break
 
     # When everything done, release the capture
-    # cap.release()
+    if USING_CAMERA:
+        cap.release()
     cv2.destroyAllWindows()
 
 run_simul()
