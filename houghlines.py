@@ -14,7 +14,7 @@ def computeLines(img, displayHoughLines):
   maxX = -2000
   minY = 2000
   maxY = -2000
-  for i in range(4):
+  for i in range(5):
     line = lines[i]
     for rho,theta in line:
         a = np.cos(theta)
@@ -36,7 +36,6 @@ def computeLines(img, displayHoughLines):
         print("(" + str(x1) + ", " + str(y1) + ")  " + "(" + str(x2) + ", " + str(y2) + ")")
         if displayHoughLines:
           cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
-  return minX, minY, maxX, maxY
 
   if displayHoughLines:
     cv2.imshow('houghlines.jpg',img)
@@ -46,11 +45,12 @@ def computeLines(img, displayHoughLines):
         if k == 27:
           break
   print("Mins: (" + str(minX) + "," + str(minY) + ") Maxs: (" + str(maxX) + "," + str(maxY) + ")")
+  return minX, minY, maxX, maxY
 
-def run():
-  img = cv2.imread('pool2.jpg')
-  displayHoughLines = False
-  x1, y1, x2, y2 = computeLines(img, displayHoughLines)
-  print("Returns (" + str(x1) + ", " + str(y1) + ")  " + "(" + str(x2) + ", " + str(y2) + ")")
+# def run():
+#   img = cv2.imread('pool2.jpg')
+#   displayHoughLines = True
+#   x1, y1, x2, y2 = computeLines(img, displayHoughLines)
+#   print("Returns (" + str(x1) + ", " + str(y1) + ")  " + "(" + str(x2) + ", " + str(y2) + ")")
 
-run()
+# run()
